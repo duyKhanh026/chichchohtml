@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Red Dot Game (Explosion AOE)</title>
+	<style>
+		body {
+			margin: 0;
+			overflow: hidden;
+		}
+		#gameCanvas {
+			display: block;
+			margin: 0 auto;
+			border: 3px solid black;
+		}
+	</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="1200" height="800"></canvas>
+
+<script>
+// Setup canvas
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Load all images
+const bgImg = new Image(); bgImg.src = "bg.png";
+const redImg = new Image(); redImg.src = "red.png";
+const greenImg = new Image(); greenImg.src = "green.png";
+const meteorImg = new Image(); meteorImg.src = "/Particle FX 1.3 Free/meteor.png";
+const gameOverImg = new Image(); gameOverImg.src = "gameover.png";
+const explosionSprite = new Image(); explosionSprite.src = "/Particle FX 1.3 Free/pngegg.png"; // 4x5 sprite sheet (192x192)
+
+// Game data
+const redDot = {
+	x: 100,
+	y: 350,
+	width: 90,
+	height: 60,
+	speed: 8
+};
+
+let obstacles = [];
+let meteors = [];
+let explosions = [];
+let gameOver = false;
+let score = 0;
+let meteorWaveActive = false;
+let meteorWaveTimer = 0;
+let lastScoreCheckpoint = 0;
+
+
+// Controls
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// Spawn meteor (diagonal movement)
+function spawnMeteor() {
+	const size = 60;
+	const x = 300 + Math.random() * (canvas.width + 400);
+	const y = -(Math.random() * canvas.height);
+	const speedX = 4 ;
+	const speedY = 3 ;
+	meteors.push({
+		x, y, size, speedX, speedY,
+		birthTime: Date.now()
+	});
+}
+
+function drawMeteors() {
+	meteors.forEach(m => {
+		ctx.drawImage(meteorImg, m.x, m.y, m.size, m.size);
+	});
+}
+
+function updateMeteors() {
+	const now = Date.now();
+	for (let i = 0; i < meteors.length; i++) {
+		let m = meteors[i];
+		m.x -= m.speedX;
+		m.y += m.speedY;
+
+		if (now - m.birthTime >= 1500) { // explode after 1 second
+			spawnExplosion(m.x, m.y);
+			meteors.splice(i, 1);
+			i--;
+		}
+	}
+}
+
+// Explosion logic
+function spawnExplosion(x, y) {
+	explosions.push({
+		x, y,
+		frame: 0,
+		frameMax: 20,
+		frameWidth: 192,
+		frameHeight: 192,
+		frameSpeed: 3,
+		frameCounter: 0
+	});
+}
+
+function updateExplosions() {
+	for (let i = 0; i < explosions.length; i++) {
+		let exp = explosions[i];
+		exp.frameCounter++;
+
+		if (exp.frameCounter >= exp.frameSpeed) {
+			exp.frame++;
+			exp.frameCounter = 0;
+		}
+
+		if (exp.frame >= exp.frameMax) {
+			explosions.splice(i, 1);
+			i--;
+			continue;
+		}
+
+		// Collision detection with redDot
+		const explosionBox = {
+			x: exp.x,
+			y: exp.y,
+			width: exp.frameWidth,
+			height: exp.frameHeight
+		};
+
+		if (
+			redDot.x < explosionBox.x + explosionBox.width &&
+			redDot.x + redDot.width > explosionBox.x &&
+			redDot.y < explosionBox.y + explosionBox.height &&
+			redDot.y + redDot.height > explosionBox.y
+		) {
+			gameOver = true;
+		}
+	}
+}
+
+function drawExplosions() {
+	for (let exp of explosions) {
+		let col = exp.frame % 4;
+		let row = Math.floor(exp.frame / 4);
+		ctx.drawImage(
+			explosionSprite,
+			col * exp.frameWidth,
+			row * exp.frameHeight,
+			exp.frameWidth,
+			exp.frameHeight,
+			exp.x,
+			exp.y,
+			exp.frameWidth,
+			exp.frameHeight
+		);
+	}
+}
+
+// Movement
+function moveRedDot() {
+	if (keys["w"] || keys["ArrowUp"]) redDot.y -= redDot.speed;
+	if (keys["s"] || keys["ArrowDown"]) redDot.y += redDot.speed;
+	if (keys["a"] || keys["ArrowLeft"]) redDot.x -= redDot.speed;
+	if (keys["d"] || keys["ArrowRight"]) redDot.x += redDot.speed;
+
+	// clamp to canvas
+	redDot.y = Math.max(0, Math.min(canvas.height - redDot.height, redDot.y));
+	redDot.x = Math.max(0, Math.min(canvas.width - redDot.width, redDot.x));
+}
+
+// Obstacles
+function spawnObstacle() {
+	const y = Math.random() * (canvas.height - 60);
+	obstacles.push({ x: canvas.width, y: y, width: 90, height: 60, speed: 6 });
+}
+
+function updateObstacles() {
+	obstacles.forEach(obs => obs.x -= obs.speed);
+	obstacles = obstacles.filter(obs => obs.x + obs.width > 0);
+}
+
+function drawObstacles() {
+	for (let obs of obstacles) {
+		ctx.drawImage(greenImg, obs.x, obs.y, obs.width, obs.height);
+	}
+}
+
+function detectCollision() {
+	for (let obs of obstacles) {
+		if (
+			redDot.x < obs.x + obs.width &&
+			redDot.x + redDot.width > obs.x &&
+			redDot.y < obs.y + obs.height &&
+			redDot.y + redDot.height > obs.y
+		) {
+			gameOver = true;
+		}
+	}
+}
+
+// UI
+function drawScore() {
+	ctx.fillStyle = "white";
+	ctx.font = "30px Arial";
+	ctx.fillText("Score: " + score, 20, 40);
+}
+
+// Game Loop
+let spawnTimer = 0;
+let scoreTimer = 0;
+
+function gameLoop() {
+	ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+	if (gameOver) {
+		ctx.drawImage(gameOverImg, 0, 0, canvas.width, canvas.height);
+		ctx.fillStyle = "white";
+		ctx.font = "50px Arial";
+		ctx.fillText("GAME OVER", 430, 330);
+		ctx.font = "32px Arial";
+		ctx.fillText("Final Score: " + score, 480, 530);
+		return;
+	}
+
+	moveRedDot();
+	ctx.drawImage(redImg, redDot.x, redDot.y, redDot.width, redDot.height);
+
+	updateObstacles();
+	drawObstacles();
+	detectCollision();
+
+	updateMeteors();
+	drawMeteors();
+
+	updateExplosions();
+	drawExplosions();
+
+	// Spawn green obstacle
+	spawnTimer++;
+	if (spawnTimer > 50) {
+		spawnObstacle();
+		spawnTimer = 0;
+	}
+
+	// ❗️Kích hoạt đợt thiên thạch nếu score đạt mốc 30, 60, 90...
+	if (score > 0 && score % 40 === 0 && score !== lastScoreCheckpoint) {
+		meteorWaveActive = true;
+		meteorWaveTimer = 0;
+		lastScoreCheckpoint = score;
+	}
+
+	// ❗️Trong thời gian đợt thiên thạch đang hoạt động (2 giây)
+	if (meteorWaveActive) {
+		meteorWaveTimer++;
+
+		// Cứ mỗi 15 frame thì spawn 1 meteor
+		if (meteorWaveTimer % 25 === 0) {
+			spawnMeteor();
+		}
+
+		if (meteorWaveTimer >= 360) {
+			meteorWaveActive = false;
+		}
+	}
+
+	// Tăng điểm
+	scoreTimer++;
+	if (scoreTimer >= 30) {
+		score++;
+		scoreTimer = 0;
+	}
+
+	drawScore();
+	requestAnimationFrame(gameLoop);
+}
+
+
+
+window.onload = () => {
+	gameLoop();
+};
+</script>
+</body>
+</html>
