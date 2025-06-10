@@ -118,12 +118,15 @@ function updateExplosions() {
 			continue;
 		}
 
-		// Collision detection with redDot
+		// Collision detection with redDot (with reduced hitbox)
+		const hitboxScale = 0.5; // thu nhỏ còn 1/2
+		const reducedWidth = exp.frameWidth * hitboxScale;
+		const reducedHeight = exp.frameHeight * hitboxScale;
 		const explosionBox = {
-			x: exp.x,
-			y: exp.y,
-			width: exp.frameWidth,
-			height: exp.frameHeight
+			x: exp.x + (exp.frameWidth - reducedWidth) / 2,
+			y: exp.y + (exp.frameHeight - reducedHeight) / 2,
+			width: reducedWidth,
+			height: reducedHeight
 		};
 
 		if (
@@ -134,6 +137,7 @@ function updateExplosions() {
 		) {
 			gameOver = true;
 		}
+
 	}
 }
 
