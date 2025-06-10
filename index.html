@@ -13,30 +13,43 @@
 			margin: 0 auto;
 			border: 3px solid black;
 		}
+		#toggleGreen {
+			position: absolute;
+			top: 20px;
+			right: 20px;
+			z-index: 10;
+			background: darkgreen;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 10px;
+			font-size: 18px;
+			cursor: pointer;
+		}
 	</style>
 </head>
 <body>
+
 <canvas id="gameCanvas" width="1200" height="800"></canvas>
+<button id="toggleGreen">Tắt Green</button>
 
 <script>
 // Setup canvas
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Load all images
+// Load images
 const bgImg = new Image(); bgImg.src = "bg.png";
 const redImg = new Image(); redImg.src = "red.png";
 const greenImg = new Image(); greenImg.src = "green.png";
 const meteorImg = new Image(); meteorImg.src = "/Particle FX 1.3 Free/meteor.png";
 const gameOverImg = new Image(); gameOverImg.src = "gameover.png";
-const explosionSprite = new Image(); explosionSprite.src = "/Particle FX 1.3 Free/pngegg.png"; // 4x5 sprite sheet (192x192)
+const explosionSprite = new Image(); explosionSprite.src = "/Particle FX 1.3 Free/pngegg.png"; // 4x5 sprite sheet
 
 // Game data
 const redDot = {
-	x: 100,
-	y: 350,
-	width: 90,
-	height: 60,
+	x: 100, y: 350,
+	width: 90, height: 60,
 	speed: 8
 };
 
@@ -45,33 +58,39 @@ let meteors = [];
 let explosions = [];
 let gameOver = false;
 let score = 0;
+let greenEnabled = false;
 let meteorWaveActive = false;
 let meteorWaveTimer = 0;
 let lastScoreCheckpoint = 0;
-
 
 // Controls
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key] = true);
 document.addEventListener("keyup", e => keys[e.key] = false);
 
-// Spawn meteor (diagonal movement)
+// Toggle green obstacles
+const toggleBtn = document.getElementById("toggleGreen");
+toggleBtn.addEventListener("click", () => {
+	greenEnabled = !greenEnabled;
+	toggleBtn.textContent = greenEnabled ? "Tắt Green" : "Bật Green";
+});
+
+// Meteor logic
 function spawnMeteor() {
 	const size = 60;
-	const x = 300 + Math.random() * (canvas.width + 400);
-	const y = -(Math.random() * canvas.height);
-	const speedX = 4 ;
-	const speedY = 3 ;
-	meteors.push({
-		x, y, size, speedX, speedY,
-		birthTime: Date.now()
-	});
+	const x = randomSpawn(canvas.width / 1.5,(canvas.width * 2) - 400)
+	const y = randomSpawn(-(canvas.height - 150), 50);
+	const speedX = 4, speedY = 3;
+	meteors.push({ x, y, size, speedX, speedY, birthTime: Date.now() });
 }
 
+function randomSpawn(min , max) {
+	return Math.random() * (max - min) + min;
+}
+
+
 function drawMeteors() {
-	meteors.forEach(m => {
-		ctx.drawImage(meteorImg, m.x, m.y, m.size, m.size);
-	});
+	meteors.forEach(m => ctx.drawImage(meteorImg, m.x, m.y, m.size, m.size));
 }
 
 function updateMeteors() {
@@ -80,11 +99,9 @@ function updateMeteors() {
 		let m = meteors[i];
 		m.x -= m.speedX;
 		m.y += m.speedY;
-
-		if (now - m.birthTime >= 1500) { // explode after 1 second
-			spawnExplosion(m.x, m.y);
-			meteors.splice(i, 1);
-			i--;
+		if (now - m.birthTime >= 1500) {
+			spawnExplosion(m.x - m.size, m.y - m.size);
+			meteors.splice(i, 1); i--;
 		}
 	}
 }
@@ -93,12 +110,9 @@ function updateMeteors() {
 function spawnExplosion(x, y) {
 	explosions.push({
 		x, y,
-		frame: 0,
-		frameMax: 20,
-		frameWidth: 192,
-		frameHeight: 192,
-		frameSpeed: 3,
-		frameCounter: 0
+		frame: 0, frameMax: 20,
+		frameWidth: 192, frameHeight: 192,
+		frameSpeed: 3, frameCounter: 0
 	});
 }
 
@@ -106,38 +120,34 @@ function updateExplosions() {
 	for (let i = 0; i < explosions.length; i++) {
 		let exp = explosions[i];
 		exp.frameCounter++;
-
 		if (exp.frameCounter >= exp.frameSpeed) {
-			exp.frame++;
-			exp.frameCounter = 0;
+			exp.frame++; exp.frameCounter = 0;
 		}
-
 		if (exp.frame >= exp.frameMax) {
-			explosions.splice(i, 1);
-			i--;
+			explosions.splice(i, 1); i--;
 			continue;
 		}
 
-		// Collision detection with redDot (with reduced hitbox)
-		const hitboxScale = 0.5; // thu nhỏ còn 1/2
-		const reducedWidth = exp.frameWidth * hitboxScale;
-		const reducedHeight = exp.frameHeight * hitboxScale;
-		const explosionBox = {
-			x: exp.x + (exp.frameWidth - reducedWidth) / 2,
-			y: exp.y + (exp.frameHeight - reducedHeight) / 2,
-			width: reducedWidth,
-			height: reducedHeight
-		};
+		if (exp.frame > 5) {
+			const hitboxScale = 0.5;
+			const reducedWidth = exp.frameWidth * hitboxScale;
+			const reducedHeight = exp.frameHeight * hitboxScale;
+			const explosionBox = {
+				x: exp.x + (exp.frameWidth - reducedWidth) / 2,
+				y: exp.y + (exp.frameHeight - reducedHeight) / 2,
+				width: reducedWidth,
+				height: reducedHeight
+			};
 
-		if (
-			redDot.x < explosionBox.x + explosionBox.width &&
-			redDot.x + redDot.width > explosionBox.x &&
-			redDot.y < explosionBox.y + explosionBox.height &&
-			redDot.y + redDot.height > explosionBox.y
-		) {
-			gameOver = true;
+			if (
+				redDot.x < explosionBox.x + explosionBox.width &&
+				redDot.x + redDot.width > explosionBox.x &&
+				redDot.y < explosionBox.y + explosionBox.height &&
+				redDot.y + redDot.height > explosionBox.y
+			) {
+				gameOver = true;
+			}
 		}
-
 	}
 }
 
@@ -151,22 +161,21 @@ function drawExplosions() {
 			row * exp.frameHeight,
 			exp.frameWidth,
 			exp.frameHeight,
-			exp.x,
-			exp.y,
+			exp.x, exp.y,
 			exp.frameWidth,
 			exp.frameHeight
 		);
 	}
 }
 
-// Movement
+// Red dot movement
 function moveRedDot() {
 	if (keys["w"] || keys["ArrowUp"]) redDot.y -= redDot.speed;
 	if (keys["s"] || keys["ArrowDown"]) redDot.y += redDot.speed;
 	if (keys["a"] || keys["ArrowLeft"]) redDot.x -= redDot.speed;
 	if (keys["d"] || keys["ArrowRight"]) redDot.x += redDot.speed;
 
-	// clamp to canvas
+	// Clamp
 	redDot.y = Math.max(0, Math.min(canvas.height - redDot.height, redDot.y));
 	redDot.x = Math.max(0, Math.min(canvas.width - redDot.width, redDot.x));
 }
@@ -174,7 +183,7 @@ function moveRedDot() {
 // Obstacles
 function spawnObstacle() {
 	const y = Math.random() * (canvas.height - 60);
-	obstacles.push({ x: canvas.width, y: y, width: 90, height: 60, speed: 6 });
+	obstacles.push({ x: canvas.width, y, width: 90, height: 60, speed: 6 });
 }
 
 function updateObstacles() {
@@ -208,7 +217,7 @@ function drawScore() {
 	ctx.fillText("Score: " + score, 20, 40);
 }
 
-// Game Loop
+// Game loop
 let spawnTimer = 0;
 let scoreTimer = 0;
 
@@ -238,32 +247,24 @@ function gameLoop() {
 	updateExplosions();
 	drawExplosions();
 
-	// Spawn green obstacle
+	// Spawn green nếu được bật
 	spawnTimer++;
-	if (spawnTimer > 50) {
+	if (greenEnabled && spawnTimer > 50) {
 		spawnObstacle();
 		spawnTimer = 0;
 	}
 
-	// ❗️Kích hoạt đợt thiên thạch nếu score đạt mốc 30, 60, 90...
-	if (score > 0 && score % 40 === 0 && score !== lastScoreCheckpoint) {
+	// Thiên thạch mỗi 30 điểm
+	if (score > 0 && score % 20 === 0 && score !== lastScoreCheckpoint) {
 		meteorWaveActive = true;
 		meteorWaveTimer = 0;
 		lastScoreCheckpoint = score;
 	}
 
-	// ❗️Trong thời gian đợt thiên thạch đang hoạt động (2 giây)
 	if (meteorWaveActive) {
 		meteorWaveTimer++;
-
-		// Cứ mỗi 15 frame thì spawn 1 meteor
-		if (meteorWaveTimer % 25 === 0) {
-			spawnMeteor();
-		}
-
-		if (meteorWaveTimer >= 360) {
-			meteorWaveActive = false;
-		}
+		if (meteorWaveTimer % 25 === 0) spawnMeteor();
+		if (meteorWaveTimer >= 420) meteorWaveActive = false; // 2 giây @ 60fps
 	}
 
 	// Tăng điểm
@@ -277,11 +278,10 @@ function gameLoop() {
 	requestAnimationFrame(gameLoop);
 }
 
-
-
 window.onload = () => {
 	gameLoop();
 };
 </script>
+
 </body>
 </html>
