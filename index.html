@@ -58,7 +58,7 @@ let meteors = [];
 let explosions = [];
 let gameOver = false;
 let score = 0;
-let greenEnabled = false;
+let greenEnabled = true;
 let meteorWaveActive = false;
 let meteorWaveTimer = 0;
 let lastScoreCheckpoint = 0;
@@ -255,7 +255,7 @@ function gameLoop() {
 	}
 
 	// Thiên thạch mỗi 30 điểm
-	if (score > 0 && score % 20 === 0 && score !== lastScoreCheckpoint) {
+	if (score > 0 && score % 40 === 0 && score !== lastScoreCheckpoint) {
 		meteorWaveActive = true;
 		meteorWaveTimer = 0;
 		lastScoreCheckpoint = score;
