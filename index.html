@@ -26,12 +26,28 @@
 			font-size: 18px;
 			cursor: pointer;
 		}
+		#toggleMeteor {
+			position: absolute;
+			top: 70px;
+			right: 20px;
+			z-index: 10;
+			background: darkred;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 10px;
+			font-size: 18px;
+			cursor: pointer;
+		}
+
 	</style>
 </head>
 <body>
 
 <canvas id="gameCanvas" width="1200" height="800"></canvas>
-<button id="toggleGreen">Tắt Green</button>
+<button id="toggleGreen">Tắt chó chạy</button>
+<button id="toggleMeteor">Tắt Meteor</button>
+
 
 <script>
 // Setup canvas
@@ -43,6 +59,7 @@ const bgImg = new Image(); bgImg.src = "assets/bg.png";
 const redImg = new Image(); redImg.src = "assets/red.png";
 const greenImg = new Image(); greenImg.src = "assets/green.png";
 const meteorImg = new Image(); meteorImg.src = "assets/meteor.png";
+const dogHeadImg = new Image(); greenImg.src = "assets/doghead.png";
 const gameOverImg = new Image(); gameOverImg.src = "assets/gameover.png";
 const explosionSprite = new Image(); explosionSprite.src = "assets/pngegg.png"; // 4x5 sprite sheet
 
@@ -58,7 +75,8 @@ let meteors = [];
 let explosions = [];
 let gameOver = false;
 let score = 0;
-let greenEnabled = true;
+let meteorEnabled = false;
+let greenEnabled = false;
 let meteorWaveActive = false;
 let meteorWaveTimer = 0;
 let lastScoreCheckpoint = 0;
@@ -74,6 +92,13 @@ toggleBtn.addEventListener("click", () => {
 	greenEnabled = !greenEnabled;
 	toggleBtn.textContent = greenEnabled ? "Tắt Green" : "Bật Green";
 });
+
+const toggleMeteorBtn = document.getElementById("toggleMeteor");
+toggleMeteorBtn.addEventListener("click", () => {
+	meteorEnabled = !meteorEnabled;
+	toggleMeteorBtn.textContent = meteorEnabled ? "Tắt Meteor" : "Bật Meteor";
+});
+
 
 // Meteor logic
 function spawnMeteor() {
@@ -261,7 +286,7 @@ function gameLoop() {
 		lastScoreCheckpoint = score;
 	}
 
-	if (meteorWaveActive) {
+	if (meteorWaveActive && meteorEnabled) {
 		meteorWaveTimer++;
 		if (meteorWaveTimer % 25 === 0) spawnMeteor();
 		if (meteorWaveTimer >= 420) meteorWaveActive = false; // 2 giây @ 60fps
