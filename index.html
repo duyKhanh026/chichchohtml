@@ -45,8 +45,8 @@
 <body>
 
 <canvas id="gameCanvas" width="1200" height="800"></canvas>
-<button id="toggleGreen">Tắt chó chạy</button>
-<button id="toggleMeteor">Tắt Meteor</button>
+<button id="toggleGreen">Bật chó chạy</button>
+<button id="toggleMeteor">Bật Meteor</button>
 
 
 <script>
@@ -59,9 +59,9 @@ const bgImg = new Image(); bgImg.src = "assets/bg.png";
 const redImg = new Image(); redImg.src = "assets/red.png";
 const greenImg = new Image(); greenImg.src = "assets/green.png";
 const meteorImg = new Image(); meteorImg.src = "assets/meteor.png";
-const dogHeadImg = new Image(); greenImg.src = "assets/doghead.png";
+const dogHeadImg = new Image(); dogHeadImg.src = "assets/doghead.png";
 const gameOverImg = new Image(); gameOverImg.src = "assets/gameover.png";
-const explosionSprite = new Image(); explosionSprite.src = "assets/pngegg.png"; // 4x5 sprite sheet
+const explosionSprite = new Image(); explosionSprite.src = "assets/pngegg.png";
 
 // Game data
 const redDot = {
@@ -82,15 +82,21 @@ let meteorWaveTimer = 0;
 let lastScoreCheckpoint = 0;
 
 // Controls
+let beams = [];
 let keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keydown", e => {
+	keys[e.key] = true;
+	if (e.code === "Space") {
+		shootBeam();
+	}
+});
 document.addEventListener("keyup", e => keys[e.key] = false);
 
 // Toggle green obstacles
 const toggleBtn = document.getElementById("toggleGreen");
 toggleBtn.addEventListener("click", () => {
 	greenEnabled = !greenEnabled;
-	toggleBtn.textContent = greenEnabled ? "Tắt Green" : "Bật Green";
+	toggleBtn.textContent = greenEnabled ? "Tắt chó chạy" : "Bật chó chạy";
 });
 
 const toggleMeteorBtn = document.getElementById("toggleMeteor");
@@ -98,6 +104,32 @@ toggleMeteorBtn.addEventListener("click", () => {
 	meteorEnabled = !meteorEnabled;
 	toggleMeteorBtn.textContent = meteorEnabled ? "Tắt Meteor" : "Bật Meteor";
 });
+
+function shootBeam() {
+	const beam = {
+		x: redDot.x + redDot.width,
+		y: redDot.y + redDot.height / 2 - 5,
+		width: 30,
+		height: 10,
+		speed: 12
+	};
+	beams.push(beam);
+}
+function updateBeams() {
+	for (let i = 0; i < beams.length; i++) {
+		beams[i].x += beams[i].speed;
+		if (beams[i].x > canvas.width) {
+			beams.splice(i, 1);
+			i--;
+		}
+	}
+}
+function drawBeams() {
+	ctx.fillStyle = "red";
+	for (let beam of beams) {
+		ctx.fillRect(beam.x, beam.y, beam.width, beam.height);
+	}
+}
 
 
 // Meteor logic
@@ -261,6 +293,9 @@ function gameLoop() {
 
 	moveRedDot();
 	ctx.drawImage(redImg, redDot.x, redDot.y, redDot.width, redDot.height);
+
+	updateBeams();
+	drawBeams();
 
 	updateObstacles();
 	drawObstacles();
