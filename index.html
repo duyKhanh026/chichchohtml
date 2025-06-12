@@ -40,6 +40,7 @@
 			font-size: 18px;
 			cursor: pointer;
 			visibility: hidden;
+
 		}
 
 	</style>
@@ -146,7 +147,7 @@ function drawBeams() {
 
 function shootDogHeadBeam(cx, cy) {
 	const segments = 1; // Số đoạn beam
-	const segmentWidth = 25;
+	const segmentWidth = 30;
 	const segmentHeight = 15;
 
 	for (let i = 0; i < segments; i++) {
@@ -155,7 +156,7 @@ function shootDogHeadBeam(cx, cy) {
 			y: cy,
 			width: segmentWidth,
 			height: segmentHeight,
-			speed: 20
+			speed: 22
 		};
 		dogHeadBeams.push(beam);
 	}
@@ -326,12 +327,16 @@ function drawScore() {
 }
 
 function randomHead() {
-	switch (Math.floor(Math.random() * 5)) {
-		case 0: return (dogHead.height * 0) - 20;
-		case 1: return (dogHead.height * 1) - 20;
-		case 2: return (dogHead.height * 2) - 20;
-		case 3: return (dogHead.height * 3) - 20;
-		case 4: return (dogHead.height * 4) - 20;
+	if (redDot.y < canvas.height / 2) {
+		switch (Math.floor(Math.random() * 3)) {
+			case 0: return (dogHead.height * 2) - 20;
+			case 1: return (dogHead.height * 1) - 20;
+			default: return (dogHead.height * 0) - 40;
+		}
+	}
+	switch (Math.floor(Math.random() * 3)) {
+		case 0: return (dogHead.height * 3) - 20;
+		case 1: return (dogHead.height * 4) - 20;
 		default: return (dogHead.height * 5) - 60;
 	}
 	return ;
@@ -341,7 +346,7 @@ function startDogHead() {
 	dogHead.x = canvas.width;
 	dogHead.y = randomHead();
 	// dogHead.y = canvas.height / 2 + 1;
-	dogHead.frame = 100;
+	dogHead.frame = 150;
 	if (dogHead.y > canvas.height / 2) {
 		dogHead.end = dogHead.y - (dogHead.height * 1.5);
 	} else {
@@ -352,9 +357,7 @@ function startDogHead() {
 function updateDogHead() { 
 	if (dogHead.frame > 0  && dogHead.x > canvas.width - dogHead.width + 10) {
 			dogHead.x -= (dogHead.speed / 4) + (dogHead.frame / 100);
-	} else {
-		dogHead.x += dogHead.speed / 2;
-	}
+	} 
 	if (dogHead.x <= canvas.width - 120) {
 		if (dogHead.y < dogHead.end) {
 			dogHead.y += dogHead.speed; 
@@ -363,10 +366,15 @@ function updateDogHead() {
 		} 
 	}
 	
-	if (dogHead.frame > 0 && dogHead.x <= canvas.width - dogHead.width + 10) {
-		shootDogHeadBeam(canvas.width, dogHead.y + dogHead.height / 2 - 7);
-		dogHead.frame--;
-	} 
+	if (dogHead.frame > 0) {
+		if (dogHead.x <= canvas.width - dogHead.width + 10) {
+			shootDogHeadBeam(canvas.width, dogHead.y + dogHead.height / 2 - 7);
+			dogHead.frame--;
+		}
+		
+	} else {
+		dogHead.x += dogHead.speed / 2;
+	}
 }
 
 function drawDogHead() {
