@@ -25,6 +25,7 @@
 			border-radius: 10px;
 			font-size: 18px;
 			cursor: pointer;
+			visibility: hidden;
 		}
 		#toggleMeteor {
 			position: absolute;
@@ -38,6 +39,7 @@
 			border-radius: 10px;
 			font-size: 18px;
 			cursor: pointer;
+			visibility: hidden;
 		}
 
 	</style>
@@ -67,9 +69,16 @@ const explosionSprite = new Image(); explosionSprite.src = "assets/pngegg.png";
 
 // Game data
 const redDot = {
-	x: 100, y: 350,
+	x: 100, y: 35,
 	width: 90, height: 60,
-	speed: 8
+	speed: 8,
+	frame: 0
+};
+const dogHead = {
+	x: canvas.width - 150, y: 350,
+	width: 150, height: 150,
+	start: 0, end: 1,
+	speed: 2
 };
 
 let obstacles = [];
@@ -91,7 +100,7 @@ document.addEventListener("keydown", e => {
 	keys[e.key] = true;
 	if (e.code === "Space") {
 		// shootBeam();
-		shootDogHeadBeam(canvas.width, 455);
+		// dogHead.start =1;
 	}
 });
 document.addEventListener("keyup", e => keys[e.key] = false);
@@ -136,9 +145,9 @@ function drawBeams() {
 }
 
 function shootDogHeadBeam(cx, cy) {
-	const segments = 50; // Số đoạn beam
-	const segmentWidth = 100;
-	const segmentHeight = 50;
+	const segments = 1; // Số đoạn beam
+	const segmentWidth = 25;
+	const segmentHeight = 15;
 
 	for (let i = 0; i < segments; i++) {
 		const beam = {
@@ -146,7 +155,7 @@ function shootDogHeadBeam(cx, cy) {
 			y: cy,
 			width: segmentWidth,
 			height: segmentHeight,
-			speed: 15
+			speed: 20
 		};
 		dogHeadBeams.push(beam);
 	}
@@ -154,9 +163,16 @@ function shootDogHeadBeam(cx, cy) {
 function updateDogHeadBeams() {
 	for (let i = 0; i < dogHeadBeams.length; i++) {
 		dogHeadBeams[i].x -= dogHeadBeams[i].speed;
-		if (dogHeadBeams[i].x < 0) {
+		if (dogHeadBeams[i].x < dogHeadBeams[i].width * -1) {
 			dogHeadBeams.splice(i, 1);
 			i--;
+		} else if (
+			redDot.x < dogHeadBeams[i].x + dogHeadBeams[i].width &&
+			redDot.x + redDot.width > dogHeadBeams[i].x &&
+			redDot.y < dogHeadBeams[i].y + dogHeadBeams[i].height &&
+			redDot.y + redDot.height > dogHeadBeams[i].y
+		) {
+			gameOver = true;
 		}
 	}
 }
@@ -309,6 +325,57 @@ function drawScore() {
 	ctx.fillText("Score: " + score, 20, 40);
 }
 
+function randomHead() {
+	switch (Math.floor(Math.random() * 5)) {
+		case 0: return (dogHead.height * 0) - 20;
+		case 1: return (dogHead.height * 1) - 20;
+		case 2: return (dogHead.height * 2) - 20;
+		case 3: return (dogHead.height * 3) - 20;
+		case 4: return (dogHead.height * 4) - 20;
+		default: return (dogHead.height * 5) - 60;
+	}
+	return ;
+}
+
+function startDogHead() {
+	dogHead.x = canvas.width;
+	dogHead.y = randomHead();
+	// dogHead.y = canvas.height / 2 + 1;
+	dogHead.frame = 100;
+	if (dogHead.y > canvas.height / 2) {
+		dogHead.end = dogHead.y - (dogHead.height * 1.5);
+	} else {
+		dogHead.end = dogHead.y + (dogHead.height * 1.5);
+	}
+}
+
+function updateDogHead() { 
+	if (dogHead.frame > 0  && dogHead.x > canvas.width - dogHead.width + 10) {
+			dogHead.x -= (dogHead.speed / 4) + (dogHead.frame / 100);
+	} else {
+		dogHead.x += dogHead.speed / 2;
+	}
+	if (dogHead.x <= canvas.width - 120) {
+		if (dogHead.y < dogHead.end) {
+			dogHead.y += dogHead.speed; 
+		} else {
+			dogHead.y -= dogHead.speed; 
+		} 
+	}
+	
+	if (dogHead.frame > 0 && dogHead.x <= canvas.width - dogHead.width + 10) {
+		shootDogHeadBeam(canvas.width, dogHead.y + dogHead.height / 2 - 7);
+		dogHead.frame--;
+	} 
+}
+
+function drawDogHead() {
+	ctx.drawImage(dogHeadImg, dogHead.x, dogHead.y, dogHead.width, dogHead.height);
+	updateDogHeadBeams();
+	drawDogHeadBeams();
+	ctx.drawImage(dogHead1Img, dogHead.x, dogHead.y, dogHead.width, dogHead.height);
+}
+
 // Game loop
 let spawnTimer = 0;
 let scoreTimer = 0;
@@ -339,10 +406,16 @@ function gameLoop() {
 	updateMeteors();
 	drawMeteors();
 
-	//ctx.drawImage(dogHeadImg, canvas.width - 150, 400, 150, 150);
-	//updateDogHeadBeams();
-	//drawDogHeadBeams();
-	//ctx.drawImage(dogHead1Img, canvas.width - 150, 400, 150, 150);
+	if (score > 0 && score % 20 === 0 ) {
+		dogHead.start = 1;
+	}
+	if (dogHead.start === 1) {
+		startDogHead();
+		dogHead.start = 2;
+	} else if (dogHead.start === 2) {
+		updateDogHead();
+		drawDogHead();
+	} 
 
 	updateExplosions();
 	drawExplosions();
